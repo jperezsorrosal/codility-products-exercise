@@ -18,13 +18,13 @@ public class SoldProductsAggregator {
     SoldProductsAggregate aggregate(Stream<SoldProduct> soldProductStream) {
 
         // convert the products to simple products performing the currency exchange
+        // then group by product name
         Map<String, List<SimpleSoldProduct>> byProductName = soldProductStream.map(p -> soldProductToSimple(p))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.groupingBy(SimpleSoldProduct::getName));
 
         System.out.println(byProductName.toString());
-
 
         List<SimpleSoldProduct> products = new ArrayList();
         BigDecimal total = BigDecimal.ZERO;
@@ -53,7 +53,6 @@ public class SoldProductsAggregator {
         try {
             BigDecimal euroPrice = exchangeService.rate(product.getCurrency()).multiply(product.getPrice());
 
-            System.out.println(euroPrice);
             SimpleSoldProduct simple = new SimpleSoldProduct(product.getName(), euroPrice);
 
             return Optional.of(simple);
