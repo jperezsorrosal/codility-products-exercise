@@ -2,12 +2,11 @@ package com.example.demo;
 
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.util.Optional.empty;
 
 public class SoldProductsAggregator {
     private final EURExchangeService exchangeService;
@@ -20,6 +19,8 @@ public class SoldProductsAggregator {
 
         // convert the products to simple products performing the currency exchange
         Map<String, List<SimpleSoldProduct>> byProductName = soldProductStream.map(p -> soldProductToSimple(p))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.groupingBy(SimpleSoldProduct::getName));
 
         System.out.println(byProductName.toString());
@@ -30,11 +31,16 @@ public class SoldProductsAggregator {
 
         for(Map.Entry<String, List<SimpleSoldProduct>> entry: byProductName.entrySet()) {
 
-            BigDecimal totalSumPerProduct = entry.getValue().stream().map(p -> p.getPrice())
+            // aggregate the total price per product
+            BigDecimal totalSumPerProduct = entry.getValue().stream()
+                    .map(p -> p.getPrice())
                     .reduce(BigDecimal::add)
                     .orElse(BigDecimal.ZERO);
 
+            // add the product with the total prices aggregated to the list
             products.add(new SimpleSoldProduct(entry.getKey(), totalSumPerProduct));
+
+            // add the total price for all the products
             total = total.add(totalSumPerProduct);
         }
 
@@ -42,14 +48,20 @@ public class SoldProductsAggregator {
 
     }
 
-    SimpleSoldProduct soldProductToSimple(SoldProduct product) {
+    Optional<SimpleSoldProduct> soldProductToSimple(SoldProduct product) {
 
-        BigDecimal euroPrice = exchangeService.rate(product.getCurrency()).multiply(product.getPrice());
+        try {
+            BigDecimal euroPrice = exchangeService.rate(product.getCurrency()).multiply(product.getPrice());
 
-        System.out.println(euroPrice);
-        SimpleSoldProduct simple = new SimpleSoldProduct(product.getName(), euroPrice);
+            System.out.println(euroPrice);
+            SimpleSoldProduct simple = new SimpleSoldProduct(product.getName(), euroPrice);
 
-        return simple;
+            return Optional.of(simple);
+
+        } catch(UnknownCurrencyException e) {
+            return Optional.empty();
+        }
+
     }
 
     public static void main(String[] args) {
@@ -62,6 +74,7 @@ public class SoldProductsAggregator {
         products.add(new SoldProduct("iPhonic", BigDecimal.TEN, "EUR"));
         products.add(new SoldProduct("samsing", BigDecimal.ONE, "EUR"));
         products.add(new SoldProduct("samsing", BigDecimal.TEN, "EUR"));
+        products.add(new SoldProduct("samsing", BigDecimal.TEN, "XXX")); // should be ignored
 
 
         SoldProductsAggregate aggregate = aggregator.aggregate(products.stream());

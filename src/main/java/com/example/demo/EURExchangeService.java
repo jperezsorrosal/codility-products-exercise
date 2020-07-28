@@ -22,7 +22,11 @@ public class EURExchangeService {
 
     }
 
-    BigDecimal rate(String currency) {
-        return BigDecimal.valueOf(Rate.valueOf(currency).getRateVal());
+    BigDecimal rate(String currency) throws UnknownCurrencyException {
+        try {
+            return BigDecimal.valueOf(Rate.valueOf(currency).getRateVal());
+        } catch (IllegalArgumentException e) {
+            throw new UnknownCurrencyException("Unknown Currency '" + currency + "'");
+        }
     }
 }
