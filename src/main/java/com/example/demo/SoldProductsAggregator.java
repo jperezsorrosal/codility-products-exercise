@@ -58,6 +58,7 @@ public class SoldProductsAggregator {
             return Optional.of(simple);
 
         } catch(UnknownCurrencyException e) {
+            System.out.println(e);
             return Optional.empty();
         }
 
